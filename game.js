@@ -142,6 +142,53 @@ function draw() {
 
 start(); // 页面加载即开局
 
+// ===== 输入 =====
+const DIRS = {
+  ArrowUp: { x: 0, y: -1 },
+  ArrowDown: { x: 0, y: 1 },
+  ArrowLeft: { x: -1, y: 0 },
+  ArrowRight: { x: 1, y: 0 },
+  w: { x: 0, y: -1 },
+  s: { x: 0, y: 1 },
+  a: { x: -1, y: 0 },
+  d: { x: 1, y: 0 },
+};
+
+document.addEventListener('keydown', (e) => {
+  // 空格/回车：仅在游戏结束后重开；同时阻止空格滚动页面
+  if (e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault();
+    if (gameOver) {
+      start();
+    }
+    return;
+  }
+
+  // 字母键归一（兼容大写/CapsLock），方向键原样查表
+  const dir = DIRS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+  if (!dir) {
+    return;
+  }
+  e.preventDefault(); // 阻止方向键滚动页面
+
+  if (gameOver) {
+    return; // 结束状态下方向键不产生任何效果
+  }
+
+  // 判定基准：队列中最后一个方向；队列为空时为当前行进方向
+  const last = dirQueue.length > 0 ? dirQueue[dirQueue.length - 1] : direction;
+  if (dir.x === -last.x && dir.y === -last.y) {
+    return; // 180° 掉头：忽略
+  }
+  if (dir.x === last.x && dir.y === last.y) {
+    return; // 与基准同向：不入队
+  }
+  if (dirQueue.length >= 2) {
+    return; // 队列上限 2：防止连按堆积
+  }
+  dirQueue.push(dir);
+});
+
 // 调试/验收用：控制台只读检查游戏状态
 window.__snake = {
   get: () => ({ snake, direction, dirQueue, food, score, gameOver }),
