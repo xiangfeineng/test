@@ -19,9 +19,20 @@ let score;        // 分数
 let gameOver;     // 是否结束
 let timer = null; // setInterval 句柄
 
-// 临时：固定位置食物（Task 4 替换为随机生成 spawnFood）
-function initFood() {
-  return { x: 15, y: 10 };
+// 在非蛇身的空格中随机生成食物；无空格（棋盘吃满）返回 null
+function spawnFood() {
+  const empty = [];
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (!snake.some((seg) => seg.x === x && seg.y === y)) {
+        empty.push({ x, y });
+      }
+    }
+  }
+  if (empty.length === 0) {
+    return null;
+  }
+  return empty[Math.floor(Math.random() * empty.length)];
 }
 
 // 单步推进：每 STEP_MS 由 setInterval 调用一次
@@ -52,6 +63,17 @@ function step() {
   }
 
   snake.unshift(head);
+
+  // 吃到食物：+1 分、自然增长（本步未弹尾）、刷新食物
+  if (eating) {
+    score += 1;
+    scoreEl.textContent = score;
+    food = spawnFood();
+    if (food === null) {
+      return end(); // 棋盘已无空格：本局达成，结束
+    }
+  }
+
   draw();
 }
 
@@ -82,7 +104,7 @@ function reset() {
   dirQueue = [];
   score = 0;
   gameOver = false;
-  food = initFood();
+  food = spawnFood();
   scoreEl.textContent = score;
   draw();
 }
