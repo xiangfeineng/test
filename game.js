@@ -17,10 +17,62 @@ let dirQueue;     // 待消费的方向队列
 let food;         // {x,y} 或 null
 let score;        // 分数
 let gameOver;     // 是否结束
+let timer = null; // setInterval 句柄
 
 // 临时：固定位置食物（Task 4 替换为随机生成 spawnFood）
 function initFood() {
   return { x: 15, y: 10 };
+}
+
+// 单步推进：每 STEP_MS 由 setInterval 调用一次
+function step() {
+  // 每步只消费一个方向
+  if (dirQueue.length > 0) {
+    direction = dirQueue.shift();
+  }
+
+  const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+
+  // 撞墙：越界即死（判定只用新头坐标，须在弹尾之前）
+  if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
+    return end();
+  }
+
+  // 是否吃到食物（决定本步是否增长；食物逻辑 Task 4 完善，此处仅占位判断）
+  const eating = food !== null && head.x === food.x && head.y === food.y;
+
+  // 未吃到则先移除尾巴：尾巴即将腾出的格子不参与撞自身判定
+  if (!eating) {
+    snake.pop();
+  }
+
+  // 撞自己身体
+  if (snake.some((seg) => seg.x === head.x && seg.y === head.y)) {
+    return end();
+  }
+
+  snake.unshift(head);
+  draw();
+}
+
+// 游戏结束：停表、标记、重绘遮罩
+function end() {
+  gameOver = true;
+  if (timer !== null) {
+    clearInterval(timer);
+    timer = null;
+  }
+  draw();
+}
+
+// 开局/重开：务必先清旧 interval，防止多次重开叠加定时器
+function start() {
+  if (timer !== null) {
+    clearInterval(timer);
+    timer = null;
+  }
+  reset();
+  timer = setInterval(step, STEP_MS);
 }
 
 // 重置全部状态并重绘（重开 = 整体重置）
@@ -52,9 +104,21 @@ function draw() {
     ctx.fillStyle = i === 0 ? '#1e7e34' : '#2ecc71';
     ctx.fillRect(seg.x * CELL, seg.y * CELL, CELL, CELL);
   });
+
+  // 结束遮罩：分数 + 重开提示
+  if (gameOver) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(0, 0, COLS * CELL, ROWS * CELL);
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.font = '24px sans-serif';
+    ctx.fillText('游戏结束  分数：' + score, 200, 190);
+    ctx.font = '18px sans-serif';
+    ctx.fillText('按空格重新开始', 200, 225);
+  }
 }
 
-reset();
+start(); // 页面加载即开局
 
 // 调试/验收用：控制台只读检查游戏状态
 window.__snake = {
